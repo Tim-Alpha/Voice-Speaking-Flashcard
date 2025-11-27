@@ -671,6 +671,43 @@
         prevBtn.addEventListener("click", prevCard);
         nextBtn.addEventListener("click", nextCard);
 
+        // Swipe Gestures
+        const cardContainer = document.getElementById("flashcard"); // Changed from 'cardContainer' to 'flashcard'
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        cardContainer.addEventListener(
+          "touchstart",
+          (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+          },
+          { passive: true }
+        );
+
+        cardContainer.addEventListener(
+          "touchend",
+          (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+          },
+          { passive: true }
+        );
+
+        function handleSwipe() {
+          const threshold = 50; // Min distance to be considered a swipe
+          const swipeDistance = touchEndX - touchStartX;
+
+          if (Math.abs(swipeDistance) > threshold) {
+            if (swipeDistance < 0) {
+              // Swipe Left -> Next Card
+              nextCard();
+            } else {
+              // Swipe Right -> Prev Card
+              prevCard();
+            }
+          }
+        }
+
         document
           .getElementById("addCardForm")
           .addEventListener("submit", handleAddCard);
