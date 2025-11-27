@@ -2,188 +2,156 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Voice-Speaking Flashcard App</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Voice Flashcards</title>
     <style>
       :root {
-        --primary: #4f46e5;
-        --primary-hover: #4338ca;
+        --primary: #6366f1; /* Indigo 500 */
+        --primary-dark: #4f46e5;
+        --bg-color: #f8fafc;
+        --surface: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
         --danger: #ef4444;
-        --danger-hover: #dc2626;
-        --bg-color: #f3f4f6;
-        --card-bg: #ffffff;
-        --text-main: #1f2937;
-        --text-muted: #6b7280;
-        --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --nav-height: 64px;
+        --header-height: 60px;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        --radius-lg: 1rem;
+        --radius-md: 0.75rem;
       }
 
       * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
+        -webkit-tap-highlight-color: transparent;
       }
 
       body {
-        font-family: system-ui, -apple-system, sans-serif;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
         background-color: var(--bg-color);
         color: var(--text-main);
-        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden; /* Prevent body scroll, handle in views */
         display: flex;
         flex-direction: column;
-        align-items: center;
-        padding: 20px;
-        line-height: 1.5;
       }
 
-      .container {
+      /* --- Layout --- */
+      #app {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .view {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
-        max-width: 600px;
-        margin: 0 auto;
+        height: 100%;
+        overflow-y: auto;
+        padding: 1rem;
+        padding-bottom: calc(var(--nav-height) + 2rem); /* Space for nav */
+        display: none;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        background-color: var(--bg-color);
       }
 
-      header {
-        text-align: center;
-        margin-bottom: 2rem;
+      .view.active {
+        display: block;
+        opacity: 1;
+        z-index: 1;
       }
 
-      h1 {
-        font-size: 1.875rem;
+      /* --- Header --- */
+      .app-header {
+        height: var(--header-height);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        z-index: 10;
+        flex-shrink: 0;
+      }
+
+      .app-header h1 {
+        font-size: 1.125rem;
         font-weight: 700;
         color: var(--text-main);
-        margin-bottom: 0.5rem;
       }
 
-      .subtitle {
-        color: var(--text-muted);
-        font-size: 0.875rem;
-      }
-
-      /* Study Mode Styles */
-      .study-area {
-        margin-bottom: 3rem;
-      }
-
-      .card-container {
-        perspective: 1000px;
-        height: 300px;
+      /* --- Navigation --- */
+      .bottom-nav {
+        height: var(--nav-height);
+        background: var(--surface);
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
         width: 100%;
-        margin-bottom: 1.5rem;
-        cursor: pointer;
+        z-index: 20;
+        padding-bottom: env(safe-area-inset-bottom);
       }
 
-      .card {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        text-align: center;
-        transition: transform 0.6s;
-        transform-style: preserve-3d;
-        border-radius: 1rem;
-        box-shadow: var(--shadow);
-      }
-
-      .card.flipped {
-        transform: rotateY(180deg);
-      }
-
-      .card-face {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
+      .nav-item {
         display: flex;
         flex-direction: column;
-        justify-content: center;
         align-items: center;
-        background-color: var(--card-bg);
-        border-radius: 1rem;
-        padding: 2rem;
-      }
-
-      .card-face.back {
-        transform: rotateY(180deg);
-        background-color: #f9fafb;
-      }
-
-      .card-label {
+        justify-content: center;
+        gap: 4px;
+        color: var(--text-muted);
         font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
-        margin-bottom: 1rem;
+        font-weight: 500;
+        text-decoration: none;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        transition: color 0.2s;
       }
 
-      .card-text {
-        font-size: 1.5rem;
-        font-weight: 600;
-        overflow-wrap: break-word;
-        max-width: 100%;
+      .nav-item.active {
+        color: var(--primary);
       }
 
-      .speak-btn-card {
-        margin-top: 1.5rem;
-        background: none;
-        border: 1px solid #e5e7eb;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
+      .nav-item svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 2;
+      }
+
+      /* --- Components --- */
+      .btn {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
-        color: var(--primary);
-        transition: all 0.2s;
-      }
-
-      .speak-btn-card:hover {
-        background-color: #eff6ff;
-        border-color: var(--primary);
-      }
-
-      .controls {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        background: white;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        box-shadow: var(--shadow);
-      }
-
-      .nav-controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--radius-md);
+        font-weight: 600;
+        font-size: 0.95rem;
         border: none;
-        font-weight: 500;
         cursor: pointer;
-        transition: background-color 0.2s;
-        font-size: 0.875rem;
+        transition: transform 0.1s;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
       }
 
       .btn-primary {
         background-color: var(--primary);
         color: white;
-      }
-
-      .btn-primary:hover {
-        background-color: var(--primary-hover);
-      }
-
-      .btn-secondary {
-        background-color: #e5e7eb;
-        color: var(--text-main);
-      }
-
-      .btn-secondary:hover {
-        background-color: #d1d5db;
+        box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
       }
 
       .btn-danger {
@@ -191,273 +159,482 @@
         color: white;
       }
 
-      .btn-danger:hover {
-        background-color: var(--danger-hover);
-      }
-
-      .progress-text {
-        font-size: 0.875rem;
+      .btn-ghost {
+        background: transparent;
         color: var(--text-muted);
-        font-weight: 500;
-      }
-
-      .audio-settings {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-        flex-wrap: wrap;
-        padding-top: 1rem;
-        border-top: 1px solid #f3f4f6;
-      }
-
-      select {
-        flex: 1;
         padding: 0.5rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
-        background-color: white;
-        min-width: 150px;
       }
 
-      .toggle-label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
-        cursor: pointer;
-        user-select: none;
+      .btn-block {
+        width: 100%;
       }
 
-      /* Deck Manager Styles */
-      .deck-manager {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 1rem;
-        box-shadow: var(--shadow);
-      }
-
-      .section-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .add-card-form {
-        display: grid;
-        gap: 1rem;
-        margin-bottom: 2rem;
-      }
-
-      .input-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-      }
-
-      input[type="text"] {
-        padding: 0.75rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.5rem;
+      .input-field {
+        width: 100%;
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-md);
         font-size: 1rem;
+        background: var(--surface);
+        margin-bottom: 1rem;
         transition: border-color 0.2s;
       }
 
-      input[type="text"]:focus {
+      .input-field:focus {
         outline: none;
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
       }
 
-      .card-list {
-        list-style: none;
-        border-top: 1px solid #f3f4f6;
+      .label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
       }
 
-      .card-list-item {
+      /* --- View: Study --- */
+      .study-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .card-wrapper {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 1000px;
+        margin: 1rem 0;
+        min-height: 300px;
+      }
+
+      .flashcard {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+      }
+
+      .flashcard.flipped {
+        transform: rotateY(180deg);
+      }
+
+      .card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .card-face.back {
+        transform: rotateY(180deg);
+        background: #f0fdf4; /* Light green tint for answer */
+      }
+
+      .card-content {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.4;
+        margin-bottom: 1.5rem;
+      }
+
+      .card-hint {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+      }
+
+      .speak-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        border: none;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .speak-btn:hover {
+        background: #e2e8f0;
+      }
+
+      .study-controls {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 1rem 0;
-        border-bottom: 1px solid #f3f4f6;
+        gap: 1rem;
       }
 
-      .item-content {
+      .progress-indicator {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      .settings-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--surface);
+        border-radius: var(--radius-md);
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      /* --- View: Create --- */
+      .create-container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .form-card {
+        background: var(--surface);
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+      }
+
+      /* --- View: Manage --- */
+      .manage-container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .deck-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: var(--surface);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .card-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .list-item {
+        background: var(--surface);
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .list-text {
         flex: 1;
         margin-right: 1rem;
       }
 
-      .item-front {
-        font-weight: 500;
+      .list-front {
+        font-weight: 600;
+        font-size: 1rem;
         margin-bottom: 0.25rem;
       }
 
-      .item-back {
+      .list-back {
         font-size: 0.875rem;
         color: var(--text-muted);
       }
 
-      .delete-btn {
-        background: none;
-        border: none;
-        color: #9ca3af;
-        cursor: pointer;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        transition: all 0.2s;
-      }
-
-      .delete-btn:hover {
-        color: var(--danger);
-        background-color: #fee2e2;
-      }
-
+      /* --- Utilities --- */
       .empty-state {
         text-align: center;
         padding: 3rem 1rem;
         color: var(--text-muted);
       }
 
-      /* Responsive adjustments */
-      @media (min-width: 640px) {
-        .add-card-form {
-          grid-template-columns: 1fr 1fr auto;
-          align-items: end;
-        }
+      .toast {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #1e293b;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 2rem;
+        font-size: 0.875rem;
+        opacity: 0;
+        transition: all 0.3s;
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1>Flashcard Speaker</h1>
-        <p class="subtitle">Study, Flip, and Listen</p>
-      </header>
+    <header class="app-header">
+      <h1 id="headerTitle">Study Mode</h1>
+    </header>
 
-      <!-- Study Mode -->
-      <main class="study-area" id="studyArea">
-        <div class="card-container" id="cardContainer">
-          <div class="card" id="flashcard">
-            <div class="card-face front">
-              <span class="card-label">Question</span>
-              <p class="card-text" id="cardFrontText">Loading...</p>
-              <button class="speak-btn-card" id="speakFrontBtn" title="Listen">
-                <svg
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  ></path>
-                </svg>
-              </button>
+    <div id="app">
+      <!-- VIEW 1: STUDY -->
+      <div id="view-study" class="view active">
+        <div class="study-container">
+          <div class="settings-bar">
+            <div style="display: flex; align-items: center; gap: 0.5rem">
+              <input
+                type="checkbox"
+                id="autoSpeakToggle"
+                style="width: 16px; height: 16px"
+              />
+              <label
+                for="autoSpeakToggle"
+                style="font-size: 0.875rem; margin: 0"
+                >Auto-Speak</label
+              >
             </div>
-            <div class="card-face back">
-              <span class="card-label">Answer</span>
-              <p class="card-text" id="cardBackText">Loading...</p>
-              <button class="speak-btn-card" id="speakBackBtn" title="Listen">
-                <svg
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  ></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="controls">
-          <div class="nav-controls">
-            <button class="btn btn-secondary" id="prevBtn">Previous</button>
-            <span class="progress-text" id="progressText">Card 1 of 3</span>
-            <button class="btn btn-primary" id="nextBtn">Next</button>
-          </div>
-          <div class="audio-settings">
-            <select id="voiceSelect">
-              <option value="">Loading voices...</option>
+            <select
+              id="voiceSelect"
+              style="
+                max-width: 150px;
+                padding: 4px;
+                border-radius: 4px;
+                border: 1px solid #e2e8f0;
+              "
+            >
+              <option value="">Default Voice</option>
             </select>
-            <label class="toggle-label">
-              <input type="checkbox" id="autoSpeakToggle" />
-              Auto-speak
-            </label>
+          </div>
+
+          <div class="card-wrapper" id="cardContainer">
+            <div class="flashcard" id="flashcard">
+              <div class="card-face front">
+                <div class="card-hint">QUESTION</div>
+                <div class="card-content" id="cardFrontText">Loading...</div>
+                <button class="speak-btn" id="speakFrontBtn">
+                  <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="card-face back">
+                <div class="card-hint">ANSWER</div>
+                <div class="card-content" id="cardBackText">Loading...</div>
+                <button class="speak-btn" id="speakBackBtn">
+                  <svg
+                    width="24"
+                    height="24"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="study-controls">
+            <button
+              class="btn btn-primary"
+              id="prevBtn"
+              style="width: 48px; padding: 0"
+            >
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                ></path>
+              </svg>
+            </button>
+            <span class="progress-indicator" id="progressText">1 / 5</span>
+            <button
+              class="btn btn-primary"
+              id="nextBtn"
+              style="width: 48px; padding: 0"
+            >
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                ></path>
+              </svg>
+            </button>
           </div>
         </div>
-      </main>
+      </div>
 
-      <!-- Deck Manager -->
-      <section class="deck-manager">
-        <div class="section-title">
-          <span>Manage Deck</span>
-          <button
-            class="btn btn-danger"
-            id="clearDeckBtn"
-            style="font-size: 0.75rem; padding: 0.25rem 0.5rem"
-          >
-            Clear All
-          </button>
+      <!-- VIEW 2: CREATE -->
+      <div id="view-create" class="view">
+        <div class="create-container">
+          <div class="form-card">
+            <form id="addCardForm">
+              <label class="label" for="newFront">Front (Question)</label>
+              <textarea
+                class="input-field"
+                id="newFront"
+                rows="3"
+                placeholder="Enter text..."
+                required
+              ></textarea>
+
+              <label class="label" for="newBack">Back (Answer)</label>
+              <textarea
+                class="input-field"
+                id="newBack"
+                rows="3"
+                placeholder="Enter text..."
+                required
+              ></textarea>
+
+              <button type="submit" class="btn btn-primary btn-block">
+                Add Card
+              </button>
+            </form>
+          </div>
         </div>
+      </div>
 
-        <form class="add-card-form" id="addCardForm">
-          <div class="input-group">
-            <label for="newFront">Front Text</label>
-            <input
-              type="text"
-              id="newFront"
-              placeholder="e.g., Apple"
-              required
-            />
+      <!-- VIEW 3: MANAGE -->
+      <div id="view-manage" class="view">
+        <div class="manage-container">
+          <div class="deck-stats">
+            <span
+              style="font-weight: 600; color: var(--text-muted)"
+              id="deckCount"
+              >Total Cards: 0</span
+            >
+            <button
+              class="btn btn-danger"
+              id="clearDeckBtn"
+              style="font-size: 0.8rem; padding: 0.5rem 1rem"
+            >
+              Clear All
+            </button>
           </div>
-          <div class="input-group">
-            <label for="newBack">Back Text</label>
-            <input
-              type="text"
-              id="newBack"
-              placeholder="e.g., Manzana"
-              required
-            />
-          </div>
-          <button type="submit" class="btn btn-primary">Add Card</button>
-        </form>
-
-        <div id="cardListContainer">
           <ul class="card-list" id="cardList">
-            <!-- List items will be injected here -->
+            <!-- Items -->
           </ul>
         </div>
-      </section>
+      </div>
     </div>
 
+    <nav class="bottom-nav">
+      <div
+        class="nav-item active"
+        data-target="view-study"
+        onclick="switchView('view-study')"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+          ></path>
+        </svg>
+        <span>Study</span>
+      </div>
+      <div
+        class="nav-item"
+        data-target="view-create"
+        onclick="switchView('view-create')"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          ></path>
+        </svg>
+        <span>Create</span>
+      </div>
+      <div
+        class="nav-item"
+        data-target="view-manage"
+        onclick="switchView('view-manage')"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          ></path>
+        </svg>
+        <span>Manage</span>
+      </div>
+    </nav>
+
+    <div id="toast" class="toast">Card Added!</div>
+
     <script>
-      // --- State Management ---
-      const STORAGE_KEY = "flashcards";
+      // --- State ---
+      const STORAGE_KEY = "flashcards_v2";
       const DEMO_DECK = [
         { id: 1, front: "Hello", back: "Hola" },
-        { id: 2, front: "Cat", back: "Gato" },
+        { id: 2, front: "Good Morning", back: "Buenos Días" },
         { id: 3, front: "Thank you", back: "Gracias" },
       ];
 
@@ -467,169 +644,142 @@
       let voices = [];
       let synth = window.speechSynthesis;
 
-      // --- DOM Elements ---
-      const cardContainer = document.getElementById("cardContainer");
+      // --- Elements ---
+      const views = document.querySelectorAll(".view");
+      const navItems = document.querySelectorAll(".nav-item");
+      const headerTitle = document.getElementById("headerTitle");
+
+      // Study Elements
       const flashcard = document.getElementById("flashcard");
       const cardFrontText = document.getElementById("cardFrontText");
       const cardBackText = document.getElementById("cardBackText");
+      const progressText = document.getElementById("progressText");
       const prevBtn = document.getElementById("prevBtn");
       const nextBtn = document.getElementById("nextBtn");
-      const progressText = document.getElementById("progressText");
       const voiceSelect = document.getElementById("voiceSelect");
       const autoSpeakToggle = document.getElementById("autoSpeakToggle");
-      const speakFrontBtn = document.getElementById("speakFrontBtn");
-      const speakBackBtn = document.getElementById("speakBackBtn");
-      const addCardForm = document.getElementById("addCardForm");
-      const newFrontInput = document.getElementById("newFront");
-      const newBackInput = document.getElementById("newBack");
-      const cardList = document.getElementById("cardList");
-      const clearDeckBtn = document.getElementById("clearDeckBtn");
-      const studyArea = document.getElementById("studyArea");
 
-      // --- Initialization ---
+      // --- Init ---
       function init() {
         loadDeck();
         loadVoices();
-        renderStudyMode();
-        renderDeckManager();
+        renderStudy();
+        renderManage();
 
         // Event Listeners
-        cardContainer.addEventListener("click", handleCardClick);
+        flashcard.addEventListener("click", handleCardClick);
         prevBtn.addEventListener("click", prevCard);
         nextBtn.addEventListener("click", nextCard);
-        addCardForm.addEventListener("submit", addCard);
-        clearDeckBtn.addEventListener("click", clearDeck);
 
-        // Speak buttons (stop propagation to prevent flip)
-        speakFrontBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          speak(deck[currentIndex].front);
-        });
-        speakBackBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          speak(deck[currentIndex].back);
-        });
+        document
+          .getElementById("addCardForm")
+          .addEventListener("submit", handleAddCard);
+        document
+          .getElementById("clearDeckBtn")
+          .addEventListener("click", handleClearDeck);
 
-        // Voice loading
+        document
+          .getElementById("speakFrontBtn")
+          .addEventListener("click", (e) => {
+            e.stopPropagation();
+            speak(deck[currentIndex]?.front);
+          });
+        document
+          .getElementById("speakBackBtn")
+          .addEventListener("click", (e) => {
+            e.stopPropagation();
+            speak(deck[currentIndex]?.back);
+          });
+
         if (speechSynthesis.onvoiceschanged !== undefined) {
           speechSynthesis.onvoiceschanged = loadVoices;
         }
       }
 
-      // --- Logic ---
+      // --- Navigation ---
+      window.switchView = function (viewId) {
+        // Update Views
+        views.forEach((view) => {
+          if (view.id === viewId) {
+            view.classList.add("active");
+          } else {
+            view.classList.remove("active");
+          }
+        });
 
+        // Update Nav
+        navItems.forEach((item) => {
+          if (item.dataset.target === viewId) {
+            item.classList.add("active");
+          } else {
+            item.classList.remove("active");
+          }
+        });
+
+        // Update Header
+        switch (viewId) {
+          case "view-study":
+            headerTitle.textContent = "Study Mode";
+            renderStudy();
+            break;
+          case "view-create":
+            headerTitle.textContent = "Add New Card";
+            break;
+          case "view-manage":
+            headerTitle.textContent = "Manage Deck";
+            renderManage();
+            break;
+        }
+      };
+
+      // --- Data Logic ---
       function loadDeck() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           deck = JSON.parse(stored);
         } else {
-          deck = [...DEMO_DECK]; // Copy demo deck
+          deck = [...DEMO_DECK];
           saveDeck();
         }
       }
 
       function saveDeck() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(deck));
-        renderDeckManager();
       }
 
-      function loadVoices() {
-        voices = synth.getVoices();
-        voiceSelect.innerHTML = "";
-
-        // Filter for useful voices if possible, or just list all
-        // Sort by name
-        voices.sort((a, b) => a.name.localeCompare(b.name));
-
-        voices.forEach((voice, index) => {
-          const option = document.createElement("option");
-          option.textContent = `${voice.name} (${voice.lang})`;
-          option.value = index;
-
-          // Try to select a default English voice
-          if (voice.default) {
-            option.selected = true;
-          }
-          voiceSelect.appendChild(option);
-        });
-
-        if (voices.length === 0) {
-          const option = document.createElement("option");
-          option.textContent = "No voices available";
-          voiceSelect.appendChild(option);
-        }
-      }
-
-      function speak(text) {
-        if (synth.speaking) {
-          synth.cancel();
-        }
-
-        if (text !== "") {
-          const utterThis = new SpeechSynthesisUtterance(text);
-          const selectedOption = voiceSelect.selectedOptions[0]?.value;
-
-          if (selectedOption && voices[selectedOption]) {
-            utterThis.voice = voices[selectedOption];
-          }
-
-          synth.speak(utterThis);
-        }
-      }
-
-      // --- Study Mode UI ---
-
-      function renderStudyMode() {
+      // --- Study Logic ---
+      function renderStudy() {
         if (deck.length === 0) {
-          cardFrontText.textContent = "No cards available";
-          cardBackText.textContent = "Add some cards below!";
-          progressText.textContent = "0 of 0";
+          cardFrontText.textContent = "No cards!";
+          cardBackText.textContent = "Go to 'Create' to add some.";
+          progressText.textContent = "0 / 0";
           flashcard.classList.remove("flipped");
-          isFlipped = false;
-          prevBtn.disabled = true;
-          nextBtn.disabled = true;
-          speakFrontBtn.style.display = "none";
-          speakBackBtn.style.display = "none";
           return;
         }
 
-        prevBtn.disabled = false;
-        nextBtn.disabled = false;
-        speakFrontBtn.style.display = "flex";
-        speakBackBtn.style.display = "flex";
-
-        // Ensure index is valid
+        // Bounds check
         if (currentIndex >= deck.length) currentIndex = 0;
         if (currentIndex < 0) currentIndex = deck.length - 1;
 
         const card = deck[currentIndex];
         cardFrontText.textContent = card.front;
         cardBackText.textContent = card.back;
-        progressText.textContent = `Card ${currentIndex + 1} of ${deck.length}`;
+        progressText.textContent = `${currentIndex + 1} / ${deck.length}`;
 
-        // Reset flip state when changing cards
         if (isFlipped) {
           flashcard.classList.remove("flipped");
           isFlipped = false;
         }
 
-        // Auto-speak front if enabled
         if (autoSpeakToggle.checked) {
-          // Small delay to allow transition
           setTimeout(() => speak(card.front), 300);
         }
       }
 
       function handleCardClick(e) {
         if (deck.length === 0) return;
-
-        // Don't flip if clicking buttons
-        if (
-          e.target.closest("button") ||
-          e.target.closest("select") ||
-          e.target.closest("input")
-        )
-          return;
+        // Ignore clicks on buttons inside card
+        if (e.target.closest("button")) return;
 
         flashcard.classList.toggle("flipped");
         isFlipped = !isFlipped;
@@ -642,111 +792,99 @@
       function nextCard() {
         if (deck.length === 0) return;
         currentIndex = (currentIndex + 1) % deck.length;
-        renderStudyMode();
+        renderStudy();
       }
 
       function prevCard() {
         if (deck.length === 0) return;
         currentIndex = (currentIndex - 1 + deck.length) % deck.length;
-        renderStudyMode();
+        renderStudy();
       }
 
-      // --- Deck Manager UI ---
+      // --- Create Logic ---
+      function handleAddCard(e) {
+        e.preventDefault();
+        const front = document.getElementById("newFront").value.trim();
+        const back = document.getElementById("newBack").value.trim();
 
-      function renderDeckManager() {
-        cardList.innerHTML = "";
+        if (front && back) {
+          deck.push({ id: Date.now(), front, back });
+          saveDeck();
+
+          // Reset form
+          document.getElementById("newFront").value = "";
+          document.getElementById("newBack").value = "";
+          document.getElementById("newFront").focus();
+
+          showToast("Card Added!");
+        }
+      }
+
+      // --- Manage Logic ---
+      function renderManage() {
+        const list = document.getElementById("cardList");
+        const count = document.getElementById("deckCount");
+        list.innerHTML = "";
+        count.textContent = `Total Cards: ${deck.length}`;
 
         if (deck.length === 0) {
-          cardList.innerHTML =
-            '<li class="empty-state">No cards in deck. Add one above!</li>';
+          list.innerHTML = '<li class="empty-state">Deck is empty.</li>';
           return;
         }
 
         deck.forEach((card, index) => {
           const li = document.createElement("li");
-          li.className = "card-list-item";
+          li.className = "list-item";
           li.innerHTML = `
-                    <div class="item-content">
-                        <div class="item-front">${escapeHtml(card.front)}</div>
-                        <div class="item-back">${escapeHtml(card.back)}</div>
+                    <div class="list-text">
+                        <div class="list-front">${escapeHtml(card.front)}</div>
+                        <div class="list-back">${escapeHtml(card.back)}</div>
                     </div>
-                    <button class="delete-btn" onclick="deleteCard(${index})" title="Delete Card">
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
+                    <button class="btn btn-ghost" onclick="deleteCard(${index})">
+                        <svg width="20" height="20" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 `;
-          cardList.appendChild(li);
+          list.appendChild(li);
         });
       }
 
-      function addCard(e) {
-        e.preventDefault();
-        const front = newFrontInput.value.trim();
-        const back = newBackInput.value.trim();
+      window.deleteCard = function (index) {
+        deck.splice(index, 1);
+        saveDeck();
+        renderManage();
+        // Reset study index if needed
+        if (currentIndex >= deck.length)
+          currentIndex = Math.max(0, deck.length - 1);
+      };
 
-        if (front && back) {
-          const newCard = {
-            id: Date.now(),
-            front: front,
-            back: back,
-          };
-          deck.push(newCard);
+      let clearTimer;
+      function handleClearDeck() {
+        const btn = document.getElementById("clearDeckBtn");
+        if (btn.dataset.confirm === "true") {
+          deck = [];
           saveDeck();
-          newFrontInput.value = "";
-          newBackInput.value = "";
-          newFrontInput.focus();
-
-          // If this was the first card, update study mode
-          if (deck.length === 1) {
-            currentIndex = 0;
-            renderStudyMode();
-          }
+          renderManage();
+          btn.textContent = "Clear All";
+          btn.style.background = "";
+          delete btn.dataset.confirm;
+        } else {
+          btn.textContent = "Confirm?";
+          btn.style.background = "#b91c1c";
+          btn.dataset.confirm = "true";
+          clearTimer = setTimeout(() => {
+            btn.textContent = "Clear All";
+            btn.style.background = "";
+            delete btn.dataset.confirm;
+          }, 3000);
         }
       }
 
-      // Exposed to global scope for onclick in HTML
-      window.deleteCard = function (index) {
-        // Removed confirm() to ensure it works in all environments
-        deck.splice(index, 1);
-        saveDeck();
-
-        // Adjust current index if needed
-        if (currentIndex >= deck.length) {
-          currentIndex = Math.max(0, deck.length - 1);
-        }
-        renderStudyMode();
-      };
-
-      let clearConfirmTimer;
-      function clearDeck() {
-        const btn = document.getElementById("clearDeckBtn");
-
-        if (btn.dataset.confirming === "true") {
-          // Actually clear
-          deck = [];
-          saveDeck();
-          currentIndex = 0;
-          renderStudyMode();
-
-          // Reset button
-          btn.textContent = "Clear All";
-          btn.style.backgroundColor = ""; // Reset to danger color class
-          delete btn.dataset.confirming;
-          clearTimeout(clearConfirmTimer);
-        } else {
-          // First click - ask for confirmation
-          btn.textContent = "Confirm Clear?";
-          btn.style.backgroundColor = "#dc2626"; // Darker red
-          btn.dataset.confirming = "true";
-
-          // Reset after 3 seconds if not clicked
-          clearConfirmTimer = setTimeout(() => {
-            btn.textContent = "Clear All";
-            btn.style.backgroundColor = "";
-            delete btn.dataset.confirming;
-          }, 3000);
-        }
+      // --- Utils ---
+      function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2000);
       }
 
       function escapeHtml(text) {
@@ -755,7 +893,28 @@
         return div.innerHTML;
       }
 
-      // Start
+      function loadVoices() {
+        voices = synth.getVoices();
+        voiceSelect.innerHTML = "";
+        voices.sort((a, b) => a.name.localeCompare(b.name));
+        voices.forEach((voice, index) => {
+          const opt = document.createElement("option");
+          opt.value = index;
+          opt.textContent = `${voice.name} (${voice.lang})`;
+          if (voice.default) opt.selected = true;
+          voiceSelect.appendChild(opt);
+        });
+      }
+
+      function speak(text) {
+        if (!text) return;
+        if (synth.speaking) synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        const idx = voiceSelect.value;
+        if (voices[idx]) utter.voice = voices[idx];
+        synth.speak(utter);
+      }
+
       init();
     </script>
   </body>
