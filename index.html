@@ -632,8 +632,28 @@
                 "
                 >Auto-Speak</label
               >
+              <button
+                id="testVoiceBtn"
+                class="btn btn-ghost"
+                style="
+                  padding: 0.25rem 0.5rem;
+                  font-size: 0.75rem;
+                  border-radius: 6px;
+                "
+                title="Test Voice / Install Voices"
+              >
+                Test
+              </button>
             </div>
           </div>
+          <div id="voiceInfo" style="
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: -1rem;
+            margin-bottom: 1rem;
+            padding: 0 1rem;
+          "></div>
 
           <div class="card-wrapper" id="cardContainer">
             <div class="flashcard" id="flashcard">
@@ -890,6 +910,7 @@
       let isFlipped = false;
       let voices = [];
       let synth = window.speechSynthesis;
+      let fallbackEnglishVoice = null; // Cache for English fallback
 
       // --- Elements ---
       const views = document.querySelectorAll(".view");
@@ -999,6 +1020,15 @@
             e.stopPropagation();
             speak(deck[currentIndex]?.back);
           });
+
+        // Test voice button
+        const testVoiceBtn = document.getElementById("testVoiceBtn");
+        if (testVoiceBtn) {
+          testVoiceBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            testVoice();
+          });
+        }
 
         // Voice loading for WebView - multiple strategies
         if (synth && synth.onvoiceschanged !== undefined) {
@@ -1264,6 +1294,7 @@
           if (!synth) {
             console.warn("SpeechSynthesis not available");
             voiceSelect.innerHTML = '<option value="">TTS Not Available</option>';
+            updateVoiceInfo();
             return;
           }
 
@@ -1277,6 +1308,7 @@
                 populateVoiceSelect();
               } else {
                 voiceSelect.innerHTML = '<option value="">No Voices Available</option>';
+                updateVoiceInfo();
               }
             }, 500);
             return;
@@ -1286,19 +1318,151 @@
         } catch (error) {
           console.error("Error loading voices:", error);
           voiceSelect.innerHTML = '<option value="">TTS Error</option>';
+          updateVoiceInfo();
         }
+      }
+
+      function findEnglishVoice() {
+        // Find the best English voice (prioritize US English, then any English)
+        const englishVoices = voices.filter(v => 
+          v.lang.startsWith('en') || v.lang.toLowerCase().includes('english')
+        );
+        
+        if (englishVoices.length > 0) {
+          // Prefer US English, then UK English, then any English
+          const usVoice = englishVoices.find(v => v.lang.startsWith('en-US'));
+          if (usVoice) return usVoice;
+          
+          const ukVoice = englishVoices.find(v => v.lang.startsWith('en-GB'));
+          if (ukVoice) return ukVoice;
+          
+          return englishVoices[0];
+        }
+        return null;
       }
 
       function populateVoiceSelect() {
         voiceSelect.innerHTML = '<option value="">Default Voice</option>';
-        voices.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Find and cache English fallback voice
+        fallbackEnglishVoice = findEnglishVoice();
+        
+        // Update voice info display
+        updateVoiceInfo();
+        
+        // Separate English and other voices
+        const englishVoices = [];
+        const otherVoices = [];
+        
         voices.forEach((voice, index) => {
+          const isEnglish = voice.lang.startsWith('en') || 
+                           voice.lang.toLowerCase().includes('english');
+          if (isEnglish) {
+            englishVoices.push({ voice, index });
+          } else {
+            otherVoices.push({ voice, index });
+          }
+        });
+        
+        // Sort English voices (prefer US, then UK, then others)
+        englishVoices.sort((a, b) => {
+          const aUS = a.voice.lang.startsWith('en-US') ? 0 : 
+                     a.voice.lang.startsWith('en-GB') ? 1 : 2;
+          const bUS = b.voice.lang.startsWith('en-US') ? 0 : 
+                     b.voice.lang.startsWith('en-GB') ? 1 : 2;
+          if (aUS !== bUS) return aUS - bUS;
+          return a.voice.name.localeCompare(b.voice.name);
+        });
+        
+        // Sort other voices
+        otherVoices.sort((a, b) => a.voice.name.localeCompare(b.voice.name));
+        
+        // Add English voices first (prioritized)
+        englishVoices.forEach(({ voice, index }) => {
+          const opt = document.createElement("option");
+          opt.value = index;
+          opt.textContent = `${voice.name} (${voice.lang}) [English]`;
+          if (voice.default || (!voiceSelect.querySelector('option[selected]') && index === 0)) {
+            opt.selected = true;
+          }
+          voiceSelect.appendChild(opt);
+        });
+        
+        // Add separator if both types exist
+        if (englishVoices.length > 0 && otherVoices.length > 0) {
+          const separator = document.createElement("option");
+          separator.disabled = true;
+          separator.textContent = "──────────";
+          voiceSelect.appendChild(separator);
+        }
+        
+        // Add other voices
+        otherVoices.forEach(({ voice, index }) => {
           const opt = document.createElement("option");
           opt.value = index;
           opt.textContent = `${voice.name} (${voice.lang})`;
-          if (voice.default) opt.selected = true;
           voiceSelect.appendChild(opt);
         });
+        
+        // If no voice selected and we have English, select first English
+        if (!voiceSelect.value && fallbackEnglishVoice) {
+          const englishIndex = voices.indexOf(fallbackEnglishVoice);
+          if (englishIndex !== -1) {
+            voiceSelect.value = englishIndex;
+          }
+        }
+      }
+
+      function updateVoiceInfo() {
+        const voiceInfo = document.getElementById("voiceInfo");
+        if (!voiceInfo) return;
+        
+        if (!synth) {
+          voiceInfo.innerHTML = "⚠️ TTS not available in this browser";
+          return;
+        }
+        
+        if (voices.length === 0) {
+          voiceInfo.innerHTML = "⚠️ No voices found. Install voices in device settings.";
+          return;
+        }
+        
+        const englishCount = voices.filter(v => 
+          v.lang.startsWith('en') || v.lang.toLowerCase().includes('english')
+        ).length;
+        
+        if (fallbackEnglishVoice) {
+          voiceInfo.innerHTML = `✓ ${voices.length} voice(s) available • ${englishCount} English (auto-fallback enabled)`;
+        } else if (englishCount === 0) {
+          voiceInfo.innerHTML = `⚠️ No English voices found. Will use default voice. Install English voices in device settings.`;
+        } else {
+          voiceInfo.innerHTML = `✓ ${voices.length} voice(s) available`;
+        }
+      }
+
+      function testVoice() {
+        const testText = "Hello, this is a voice test";
+        
+        if (!synth) {
+          showToast("TTS not available. Check device settings.", "delete");
+          return;
+        }
+        
+        if (voices.length === 0) {
+          showToast("No voices available. Install voices in device settings.", "delete");
+          // Show instructions
+          const instructions = `
+To install voices:
+• Android: Settings → Language & Input → Text-to-Speech → Install voices
+• iOS: Settings → Accessibility → Spoken Content → Voices → Add voices
+• Desktop: Check browser/system TTS settings
+          `;
+          alert(instructions);
+          return;
+        }
+        
+        speak(testText);
+        showToast("Testing voice...", "success");
       }
 
       function speak(text) {
@@ -1325,14 +1489,31 @@
         }
       }
 
-      function performSpeak(text) {
+      function performSpeak(text, useFallback = false) {
         try {
           const utter = new SpeechSynthesisUtterance(text);
           
-          // Set voice if available
-          const idx = voiceSelect.value;
-          if (idx && voices[idx]) {
-            utter.voice = voices[idx];
+          // Set voice - use fallback English if requested or if selected voice fails
+          let selectedVoice = null;
+          
+          if (useFallback && fallbackEnglishVoice) {
+            // Use English fallback
+            selectedVoice = fallbackEnglishVoice;
+            console.log("Using English fallback voice:", selectedVoice.name);
+          } else {
+            // Try to use selected voice
+            const idx = voiceSelect.value;
+            if (idx && voices[idx]) {
+              selectedVoice = voices[idx];
+            } else if (fallbackEnglishVoice) {
+              // No selection, use English fallback
+              selectedVoice = fallbackEnglishVoice;
+              console.log("No voice selected, using English fallback");
+            }
+          }
+          
+          if (selectedVoice) {
+            utter.voice = selectedVoice;
           }
           
           // Set default properties for better compatibility
@@ -1340,14 +1521,46 @@
           utter.pitch = 1;
           utter.volume = 1;
           
-          // Error handling
+          // Error handling with automatic fallback to English
+          let hasErrored = false;
           utter.onerror = (event) => {
             console.error("Speech synthesis error:", event.error);
+            
+            // If error and we haven't tried fallback yet, retry with English
+            if (!useFallback && fallbackEnglishVoice && selectedVoice !== fallbackEnglishVoice) {
+              console.log("Voice error detected, retrying with English fallback...");
+              hasErrored = true;
+              setTimeout(() => {
+                performSpeak(text, true); // Retry with English fallback
+              }, 100);
+            } else {
+              showToast("TTS Error - Check voice settings", "delete");
+            }
           };
           
-          synth.speak(utter);
+          // Success handler
+          utter.onstart = () => {
+            if (useFallback && !hasErrored) {
+              console.log("Successfully using English fallback voice");
+            }
+          };
+          
+          // Only speak if we haven't already triggered a fallback
+          if (!hasErrored) {
+            synth.speak(utter);
+          }
         } catch (error) {
           console.error("Error in performSpeak:", error);
+          
+          // Last resort: try with English fallback if available
+          if (!useFallback && fallbackEnglishVoice) {
+            console.log("Exception caught, trying English fallback...");
+            setTimeout(() => {
+              performSpeak(text, true);
+            }, 100);
+          } else {
+            showToast("TTS Not Available", "delete");
+          }
         }
       }
 
